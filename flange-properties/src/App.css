@@ -1,0 +1,40 @@
+body {
+  background-image: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)),
+    url("/background_img.jpg");
+  background-size: cover;
+  background-position: center;
+  min-height: 100vh;
+}
+
+.app-layout-row {
+  align-items: stretch;
+  min-height: 100vh;
+}
+
+.sidebar-column {
+  display: flex;
+  padding: 0;
+}
+
+.content-column {
+  padding: 1rem;
+}
+
+.app-header {
+  font-size: 2em;
+  font-weight: bold;
+  text-align: center;
+  margin: 1rem 0;
+  font-family: Verdana, Geneva, Tahoma, sans-serif;
+  padding-bottom: 2%;
+}
+
+.search-bar {
+  display: block;
+  margin: 0 auto 2rem auto;
+  padding: 0.5rem 1rem;
+  width: 50%;
+  font-size: 1em;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}

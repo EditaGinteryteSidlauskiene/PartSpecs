@@ -1,0 +1,59 @@
+.flange-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.flange-content {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: clamp(1.5rem, 6vw, 6rem);
+}
+
+.flange-content img {
+    width: 25vw;
+    height: auto;
+}
+
+.flange-title {
+    font-size: 1.5em;
+    font-weight: bold;
+    padding-bottom: 2%;
+    color: rgb(74, 46, 46);
+}
+
+.flange-info {
+    font-size: 1em;
+    font-weight: bold;
+}
+
+@media (max-width: 768px) {
+    .flange-content {
+        flex-direction: column;
+    }
+
+    .flange-content img {
+        width: 60vw;
+    }
+}
+
+.flange-table {
+    border-collapse: collapse;
+    min-width: 300px;
+}
+
+.flange-th {
+    border: 1px solid rgb(74, 46, 46);
+    padding: 0.6rem 1.5rem;
+    text-align: left;
+    background-color: #ebe3e3;
+    font-size: larger;
+}
+
+.flange-td {
+    border: 1px solid rgb(74, 46, 46);
+    padding: 0.6rem 1.5rem;
+    text-align: left;
+    font-size: medium;
+}
