@@ -1,6 +1,6 @@
 namespace FlangePropertiesAPI.Domain;
 
-public enum BoltingSize
+public enum BoltSize
 {
     M10,
     M12,
