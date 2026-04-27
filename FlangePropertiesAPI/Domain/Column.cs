@@ -1,0 +1,35 @@
+namespace FlangePropertiesAPI.Domain;
+
+public enum Column
+{
+    D,
+    K,
+    L,
+    A,
+    B1,
+    B2,
+    B3,
+    C1,
+    C2,
+    C3,
+    C4,
+    E,
+    F32,
+    F34,
+    F35,
+    F36,
+    F37,
+    Gmax,
+    H1,
+    H2,
+    H3,
+    H4_35,
+    H4_36,
+    H5,
+    N1,
+    N2,
+    N3,
+    R1,
+    S,
+    S34
+}

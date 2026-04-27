@@ -1,5 +1,10 @@
 namespace FlangePropertiesAPI.Domain;
 
+/// <summary>
+/// Nominal diameter (DN) values per EN 1092-1.
+/// Enum order defines storage index order: Dn10=ordinal 0, Dn15=ordinal 1, etc.
+/// Used as array index in column data storage.
+/// </summary>
 public enum Dn
 {
     Dn10,

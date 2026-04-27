@@ -1,5 +1,9 @@
 namespace FlangePropertiesAPI.Domain;
 
+/// <summary>
+/// ISO metric bolt sizes used in EN 1092-1 flanges.
+/// Used in column data for bolt specifications.
+/// </summary>
 public enum BoltSize
 {
     M10,
@@ -10,5 +14,8 @@ public enum BoltSize
     M27,
     M30,
     M33,
-    M36
+    M36,
+    M39,
+    M45,
+    M52
 }

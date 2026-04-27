@@ -1,21 +1,19 @@
 namespace FlangePropertiesAPI.Domain;
 
-[Flags]
-public enum FlangeType : ushort
+public enum FlangeType
 {
-    None = 0,
-    Type01 = 1,
-    Type02 = 2,
-    Type04 = 4,
-    Type05 = 8,
-    Type11 = 16,
-    Type12 = 32,
-    Type13 = 64,
-    Type21 = 128,
-    Type32 = 256,
-    Type33 = 512,
-    Type34 = 1024,
-    Type35 = 2048,
-    Type36 = 4096,
-    Type37 = 8192
+    Type01,
+    Type02,
+    Type04,
+    Type05,
+    Type11,
+    Type12,
+    Type13,
+    Type21,
+    Type32,
+    Type33,
+    Type34,
+    Type35,
+    Type36,
+    Type37
 }
