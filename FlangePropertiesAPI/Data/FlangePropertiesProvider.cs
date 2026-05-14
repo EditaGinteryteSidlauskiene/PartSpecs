@@ -13,6 +13,11 @@ public class FlangePropertiesProvider
     {
         _tables.Add(Pn.Pn002_5, new Pn_2_5());
         _tables.Add(Pn.Pn006, new Pn_6());
+        _tables.Add(Pn.Pn010, new Pn_10());
+        _tables.Add(Pn.Pn016, new Pn_16());
+        _tables.Add(Pn.Pn025, new Pn_25());
+        _tables.Add(Pn.Pn040, new Pn_40());
+        _tables.Add(Pn.Pn063, new Pn_63());
     }
 
     public FlangeLookupResponse GetMeasures(Pn pn,

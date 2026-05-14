@@ -17,5 +17,6 @@ public enum BoltSize
     M36,
     M39,
     M45,
-    M52
+    M52,
+    M56
 }
