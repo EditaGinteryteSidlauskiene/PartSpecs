@@ -2,5 +2,8 @@
     "chat.tools.terminal.autoApprove": {
         "dotnet build": true
     },
-    "git.ignoreLimitWarning": true
+    "git.ignoreLimitWarning": true,
+    "[typescriptreact]": {
+        "editor.formatOnSave": false
+    }
 }

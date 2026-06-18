@@ -20,6 +20,22 @@ body {
   padding: 1rem;
 }
 
+@media (max-width: 991.98px) {
+  .sidebar-column {
+    flex: 0 0 0;
+    width: 0;
+    max-width: 0;
+    overflow: visible;
+  }
+
+  .content-column {
+    width: 100%;
+    max-width: 100%;
+    padding-top: 1rem;
+    padding-left: 25px;
+  }
+}
+
 .app-header {
   font-size: 2em;
   font-weight: bold;

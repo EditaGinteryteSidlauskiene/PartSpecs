@@ -437,7 +437,6 @@ public class Pn_6 : Table
         );
         AddMeasureColumn(Column.C3,
             new DimensionTableColumn<Measure>()
-                .AddApplicability(FlangeType.Type11)
                 .AddApplicability(FlangeType.Type12)
                 .AddApplicability(FlangeType.Type13)
                 .AddApplicability(FlangeType.Type21)

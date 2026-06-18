@@ -26,4 +26,77 @@
     background-color: rgb(237, 233, 220);
     overflow-y: hidden !important;
     padding-left: 10px;
+    position: relative;
+}
+
+.sidebar-toggle {
+    display: none;
+}
+
+@media (max-width: 991.98px) {
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 15px !important;
+        min-width: 15px;
+        max-width: 15px;
+        height: 100vh;
+        padding-left: 0;
+        overflow: hidden !important;
+        transition: width 0.2s ease;
+        z-index: 1050;
+        box-shadow: none;
+    }
+
+    .sidebar-open {
+        width: 240px !important;
+        max-width: 240px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    }
+
+    .sidebar-toggle {
+        display: inline-flex;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: auto;
+        z-index: 1;
+        border: none;
+        background: transparent;
+        color: rgb(74, 46, 46);
+        width: 15px;
+        height: 100vh;
+        align-items: center;
+        justify-content: center;
+        padding-top: 0;
+    }
+
+    .sidebar-open .sidebar-toggle {
+        left: auto;
+        right: 0;
+    }
+
+    .sidebar-toggle-dash {
+        display: block;
+        width: 2px;
+        height: 22px;
+        background: rgb(74, 46, 46);
+        border-radius: 999px;
+    }
+
+    .offcanvas-header,
+    .offcanvas-body {
+        margin-left: 15px;
+        width: calc(100% - 15px);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.15s ease;
+    }
+
+    .sidebar-open .offcanvas-header,
+    .sidebar-open .offcanvas-body {
+        opacity: 1;
+        pointer-events: auto;
+    }
 }

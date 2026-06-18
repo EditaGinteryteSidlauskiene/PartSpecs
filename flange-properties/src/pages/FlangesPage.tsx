@@ -1,10 +1,11 @@
+import "./FlangesPage.css";
 import FlangeMeasureLookup from "../components/flange/flangeMeasureLookup"
 
 export default function FlangesPage() {
 
     return (
-        <div>
-            <h1>Search for Flanges</h1>
+        <div className="flanges-page">
+            <h2 className="flanges-page-title">Flange Lookup</h2>
 
             <FlangeMeasureLookup />
 
