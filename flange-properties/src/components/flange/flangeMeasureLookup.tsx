@@ -3,6 +3,7 @@ import FlangeBody from "./FlangeBody";
 import FlangeFace from "./FlangeFace.tsx";
 import FlangeNeck from "./FlangeNeck";
 import FlangeDimensions from "./FlangeDimensions";
+import { computeFlangePositions } from "./flangeGeometry";
 import "./flangeMeasureLookup.css";
 
 type CountDto = {
@@ -192,6 +193,11 @@ export default function FlangeMeasureLookup() {
 
     const shouldShowCombinationsTable = effectiveCombination === null;
 
+    const pos = useMemo(
+        () => computeFlangePositions(response?.measures, effectiveCombination?.flangeType),
+        [response?.measures, effectiveCombination?.flangeType]
+    );
+
     const filteredCombinations = useMemo(() => {
         return allCombinations.filter((row) => {
             const matchesPn = activePnFilter === null || row.pn === activePnFilter;
@@ -365,10 +371,10 @@ export default function FlangeMeasureLookup() {
                             </defs>
 
                             <g transform="translate(-5 0)">
-                                <FlangeNeck flangeType={effectiveCombination?.flangeType} />
-                                <FlangeBody flangeType={effectiveCombination?.flangeType} />
-                                <FlangeFace face={activeFace} flangeType={effectiveCombination?.flangeType} />
-                                <FlangeDimensions response={response} flangeType={effectiveCombination?.flangeType} face={activeFace} />
+                                <FlangeNeck flangeType={effectiveCombination?.flangeType} pos={pos} />
+                                <FlangeBody flangeType={effectiveCombination?.flangeType} pos={pos} />
+                                <FlangeFace face={activeFace} flangeType={effectiveCombination?.flangeType} pos={pos} />
+                                <FlangeDimensions response={response} flangeType={effectiveCombination?.flangeType} face={activeFace} pos={pos} />
 
                             </g>
                         </svg>
