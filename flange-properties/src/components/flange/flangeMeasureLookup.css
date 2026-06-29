@@ -40,6 +40,27 @@
     min-width: 0;
 }
 
+.lookup-drawing-panel {
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-start;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    background-color: transparent;
+    border-radius: 10px;
+    padding: 0.75rem;
+    box-sizing: border-box;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.lookup-drawing-svg {
+    display: block;
+    width: auto;
+    height: 100%;
+}
+
 .lookup-controls {
     display: grid;
     gap: 0.75rem;
@@ -66,10 +87,17 @@
 .lookup-form {
     display: flex;
     flex-direction: row;
+    flex-wrap: wrap;
     gap: 0.25rem;
     justify-content: flex-start;
-    align-items: flex-end;
+    align-items: flex-start;
     margin-top: 3rem;
+}
+
+.lookup-form > .face-input-group {
+    flex: 0 0 100% !important;
+    width: 100%;
+    margin-top: 0.1rem;
 }
 
 .input-group {
@@ -96,6 +124,10 @@
     padding: 0.45rem 0.55rem;
     transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
     max-width: 50px;
+}
+
+.dn-input {
+    max-width: 68px;
 }
 
 .lookup-input:focus,

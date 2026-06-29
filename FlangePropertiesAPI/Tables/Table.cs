@@ -34,4 +34,9 @@ public class Table
     {
         _columns.Add(columnName, column);
     }
+
+    public bool HasData(Dn dn, FlangeType flangeType)
+    {
+        return _columns.Values.Any(col => col.GetValue(dn, flangeType).HasValue);
+    }
 }

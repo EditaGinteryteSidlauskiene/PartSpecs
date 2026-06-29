@@ -1,27 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
-import FlangeBody from "./FlangeBody";
-import FlangeFace from "./FlangeFace.tsx";
-import FlangeNeck from "./FlangeNeck";
-import FlangeDimensions from "./FlangeDimensions";
-import { computeFlangePositions } from "./flangeGeometry";
+import { useEffect, useMemo, useRef, useState } from "react";
+import FlangeDrawing from "./FlangeDrawing";
+import { createFlangeDrawingModel } from "./flangeDrawingModel";
+import type { FlangeLookupResponse } from "./flangeMeasures";
+import { normalizeFlangeType } from "./flangeTypes";
 import "./flangeMeasureLookup.css";
-
-type CountDto = {
-    value?: number;
-    instruction?: string;
-};
-
-type MeasureDto = {
-    value?: number;
-    instruction?: string;
-    measureType: string;
-};
-
-type FlangeLookupResponse = {
-    count?: CountDto;
-    boltSize?: string;
-    measures: Record<string, MeasureDto>;
-};
 
 type Combination = {
     pn: string;
@@ -61,7 +43,7 @@ const isFlangeTypeInputValid = (input: string, flangeTypeValues: string[]): bool
         return false;
     }
 
-    const normalized = input.padStart(2, "0");
+    const normalized = normalizeFlangeType(input);
     return flangeTypeValues.some((value) => formatFlangeTypeLabel(value) === normalized);
 };
 
@@ -70,6 +52,7 @@ const isFaceInputValid = (input: string): boolean => {
 };
 
 export default function FlangeMeasureLookup() {
+    const drawingPanelRef = useRef<HTMLDivElement | null>(null);
     const [flangeType, setFlangeType] = useState("");
     const [face, setFace] = useState("");
     const [dn, setDn] = useState("");
@@ -79,9 +62,12 @@ export default function FlangeMeasureLookup() {
     const [response, setResponse] = useState<FlangeLookupResponse | null>(null);
     const [isLoadingResponse, setIsLoadingResponse] = useState(false);
     const [responseError, setResponseError] = useState<string | null>(null);
+    const [availableDrawingHeight, setAvailableDrawingHeight] = useState<number | null>(null);
     const [pnValues, setPnValues] = useState<string[]>([]);
     const [dnValues, setDnValues] = useState<string[]>([]);
     const [flangeTypeValues, setFlangeTypeValues] = useState<string[]>([]);
+    const [allCombinations, setAllCombinations] = useState<Combination[]>([]);
+    const [lastValidCombination, setLastValidCombination] = useState<Combination | null>(null);
 
     useEffect(() => {
         const loadCombinationValues = async () => {
@@ -112,29 +98,31 @@ export default function FlangeMeasureLookup() {
             }
         };
 
-        void loadCombinationValues();
-    }, []);
+        const loadValidCombinations = async () => {
+            try {
+                const res = await fetch("http://localhost:5192/api/FlangeProperties/validCombinations");
+                if (!res.ok) return;
+                const data: { pn: string; dn: string; flangeType: string }[] = await res.json();
+                setAllCombinations(data.map((c) => ({
+                    pn: formatPnLabel(c.pn),
+                    dn: formatDnLabel(c.dn),
+                    flangeType: formatFlangeTypeLabel(c.flangeType),
+                })));
+            } catch {
+                setAllCombinations([]);
+            }
+        };
 
-    const allCombinations = useMemo(() => {
-        return pnValues.flatMap((pnValue) =>
-            dnValues.flatMap((dnValue) =>
-                flangeTypeValues.map((flangeTypeValue) => ({
-                    pn: formatPnLabel(pnValue),
-                    dn: formatDnLabel(dnValue),
-                    flangeType: formatFlangeTypeLabel(flangeTypeValue),
-                }))
-            )
-        );
-    }, [pnValues, dnValues, flangeTypeValues]);
+        void loadCombinationValues();
+        void loadValidCombinations();
+    }, []);
 
     const pnInput = pn.trim().replace(",", ".");
     const dnInput = dn.trim();
     const flangeTypeInput = flangeType.trim();
     const faceInput = face.trim().toUpperCase();
 
-    const normalizedFlangeTypeInput = /^\d{1,2}$/.test(flangeTypeInput)
-        ? flangeTypeInput.padStart(2, "0")
-        : flangeTypeInput;
+    const normalizedFlangeTypeInput = normalizeFlangeType(flangeTypeInput) ?? flangeTypeInput;
 
     const isPnValid = isPnInputValid(pnInput, pnValues);
     const isDnValid = isDnInputValid(dnInput, dnValues);
@@ -160,8 +148,15 @@ export default function FlangeMeasureLookup() {
         [fullyDefinedByInputs, activePnFilter, activeDnFilter, activeFlangeTypeFilter]
     );
 
+    const isInputCombinationInvalid = useMemo(() => {
+        if (!fullyDefinedInputCombination) return false;
+        return !allCombinations.some(
+            (c) => c.pn === fullyDefinedInputCombination.pn && c.dn === fullyDefinedInputCombination.dn && c.flangeType === fullyDefinedInputCombination.flangeType
+        );
+    }, [fullyDefinedInputCombination, allCombinations]);
+
     useEffect(() => {
-        if (!fullyDefinedInputCombination) {
+        if (!fullyDefinedInputCombination || isInputCombinationInvalid) {
             return;
         }
 
@@ -177,11 +172,23 @@ export default function FlangeMeasureLookup() {
 
             return fullyDefinedInputCombination;
         });
-    }, [fullyDefinedInputCombination]);
+    }, [fullyDefinedInputCombination, isInputCombinationInvalid]);
+
+    useEffect(() => {
+        if (isInputCombinationInvalid && lastValidCombination) {
+            setPn(lastValidCombination.pn);
+            setDn(lastValidCombination.dn);
+            setFlangeType(lastValidCombination.flangeType);
+        }
+    }, [isInputCombinationInvalid, lastValidCombination]);
 
     const effectiveCombination = useMemo(() => {
-        if (fullyDefinedInputCombination) {
+        if (fullyDefinedInputCombination && !isInputCombinationInvalid) {
             return fullyDefinedInputCombination;
+        }
+
+        if (isInputCombinationInvalid) {
+            return lastValidCombination;
         }
 
         if (hasAnyInvalidInput) {
@@ -189,13 +196,16 @@ export default function FlangeMeasureLookup() {
         }
 
         return null;
-    }, [fullyDefinedInputCombination, hasAnyInvalidInput, selectedCombination]);
+    }, [fullyDefinedInputCombination, hasAnyInvalidInput, selectedCombination, isInputCombinationInvalid, lastValidCombination]);
 
-    const shouldShowCombinationsTable = effectiveCombination === null;
-
-    const pos = useMemo(
-        () => computeFlangePositions(response?.measures, effectiveCombination?.flangeType),
-        [response?.measures, effectiveCombination?.flangeType]
+    const shouldShowCombinationsTable = effectiveCombination === null && !isInputCombinationInvalid;
+    const drawingModel = useMemo(
+        () => createFlangeDrawingModel({
+            measures: response?.measures,
+            flangeType: effectiveCombination?.flangeType,
+            face: activeFace,
+        }),
+        [response?.measures, effectiveCombination?.flangeType, activeFace]
     );
 
     const filteredCombinations = useMemo(() => {
@@ -235,15 +245,15 @@ export default function FlangeMeasureLookup() {
                 );
 
                 if (!result.ok) {
-                    setResponse(null);
                     setResponseError("Could not load flange details for this combination.");
                     return;
                 }
 
-                const data = await result.json();
+                const data: FlangeLookupResponse = await result.json();
                 setResponse(data);
+                setLastValidCombination(effectiveCombination);
+                setResponseError(null);
             } catch {
-                setResponse(null);
                 setResponseError("Could not load flange details for this combination.");
             } finally {
                 setIsLoadingResponse(false);
@@ -252,6 +262,31 @@ export default function FlangeMeasureLookup() {
 
         void loadFlangeDetails();
     }, [effectiveCombination, pnValues, dnValues, flangeTypeValues]);
+
+    useEffect(() => {
+        if (shouldShowCombinationsTable) {
+            return;
+        }
+
+        const updateDrawingHeight = () => {
+            const panel = drawingPanelRef.current;
+            if (!panel) {
+                return;
+            }
+
+            const rect = panel.getBoundingClientRect();
+            const bottomGap = 48;
+            const nextHeight = Math.max(120, Math.floor(window.innerHeight - rect.top - bottomGap));
+            setAvailableDrawingHeight(nextHeight);
+        };
+
+        updateDrawingHeight();
+        window.addEventListener("resize", updateDrawingHeight);
+
+        return () => {
+            window.removeEventListener("resize", updateDrawingHeight);
+        };
+    }, [shouldShowCombinationsTable, face, dn, pn, flangeType, response]);
 
     return (
         <div>
@@ -269,9 +304,9 @@ export default function FlangeMeasureLookup() {
                     }} />
                 </div>
 
-                <div className="input-group mb-3">
+                <div className="input-group mb-3 dn-input-group">
                     <span className="input-group-text" id="basic-addon1">DN</span>
-                    <input type="text" className={`form-control lookup-input ${isDnValid ? "" : "lookup-input-invalid"}`} aria-label="DN" aria-describedby="basic-addon1" value={dn} onChange={(event) => {
+                    <input type="text" className={`form-control lookup-input dn-input ${isDnValid ? "" : "lookup-input-invalid"}`} aria-label="DN" aria-describedby="basic-addon1" value={dn} onChange={(event) => {
                         const nextValue = event.target.value;
                         setDn(nextValue);
 
@@ -295,7 +330,7 @@ export default function FlangeMeasureLookup() {
                     }} />
                 </div>
 
-                <div className="input-group mb-3">
+                <div className="input-group mb-3 face-input-group">
                     <span className="input-group-text" id="basic-addon1">Face</span>
                     <input type="text" className={`form-control lookup-input ${isFaceValid ? "" : "lookup-input-invalid"}`} aria-label="Face" aria-describedby="basic-addon1" value={face} onChange={(event) => {
                         const nextValue = event.target.value.toUpperCase();
@@ -307,8 +342,12 @@ export default function FlangeMeasureLookup() {
                         }
                     }} />
                 </div>
-
             </div>
+
+            {isInputCombinationInvalid && (
+                <p style={{ marginTop: "10px", color: "#721c24" }}>Please, enter valid combination.</p>
+            )}
+
             {shouldShowCombinationsTable && (
                 <div className="combinations-section">
                     <div className="combinations-table-wrap">
@@ -348,36 +387,14 @@ export default function FlangeMeasureLookup() {
                 </div>
             )}
 
-            {!shouldShowCombinationsTable && (
+            {!shouldShowCombinationsTable && response && (
                 <section className="lookup-data-panel" style={{ marginTop: "30px" }}>
-                    <div style={{ display: "flex", justifyContent: "center", marginBottom: "20px", width: "100%" }}>
-                        <svg viewBox="-5 -80 335 225" role="img" aria-label="Type 01 flange visualization" style={{ width: "100%", maxWidth: "800px", height: "auto" }}>
-                            <defs>
-                                <pattern id="type01-hatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
-                                    <line x1="0" y1="0" x2="0" y2="6" stroke="rgb(34, 33, 33)" strokeWidth="1" />
-                                </pattern>
-                                <marker id="type01-arrowhead" markerWidth="6" markerHeight="6" refX="6" refY="3" orient="auto">
-                                    <path d="M0,1 L6,3 L0,5 z" fill="rgb(34, 33, 33)" />
-                                </marker>
-                                <marker id="type01-arrowhead-rev" markerWidth="6" markerHeight="6" refX="6" refY="3" orient="auto-start-reverse">
-                                    <path d="M0,1 L6,3 L0,5 z" fill="rgb(34, 33, 33)" />
-                                </marker>
-                                <marker id="type01-arrowhead-green" markerWidth="6" markerHeight="6" refX="6" refY="3" orient="auto">
-                                    <path d="M0,1 L6,3 L0,5 z" fill="rgb(24, 93, 44)" />
-                                </marker>
-                                <marker id="type01-arrowhead-green-rev" markerWidth="6" markerHeight="6" refX="6" refY="3" orient="auto-start-reverse">
-                                    <path d="M0,1 L6,3 L0,5 z" fill="rgb(24, 93, 44)" />
-                                </marker>
-                            </defs>
-
-                            <g transform="translate(-5 0)">
-                                <FlangeNeck flangeType={effectiveCombination?.flangeType} pos={pos} />
-                                <FlangeBody flangeType={effectiveCombination?.flangeType} pos={pos} />
-                                <FlangeFace face={activeFace} flangeType={effectiveCombination?.flangeType} pos={pos} />
-                                <FlangeDimensions response={response} flangeType={effectiveCombination?.flangeType} face={activeFace} pos={pos} />
-
-                            </g>
-                        </svg>
+                    <div
+                        ref={drawingPanelRef}
+                        className="lookup-drawing-panel"
+                        style={availableDrawingHeight ? { height: `${availableDrawingHeight}px` } : undefined}
+                    >
+                        <FlangeDrawing model={drawingModel} response={response} availableHeight={availableDrawingHeight} />
                     </div>
 
                     {isLoadingResponse && <p>Loading flange details...</p>}
@@ -415,7 +432,6 @@ export default function FlangeMeasureLookup() {
                     )}
                 </section>
             )}
-
         </div>
     )
 }

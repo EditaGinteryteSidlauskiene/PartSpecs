@@ -58,4 +58,24 @@ public class FlangePropertiesProvider
         }
         return null;
     }
+
+    public IEnumerable<(Pn pn, Dn dn, FlangeType flangeType)> GetValidCombinations()
+    {
+        var dnValues = Enum.GetValues(typeof(Dn)).Cast<Dn>();
+        var flangeTypeValues = Enum.GetValues(typeof(FlangeType)).Cast<FlangeType>();
+
+        foreach (var (pn, table) in _tables)
+        {
+            foreach (var dn in dnValues)
+            {
+                foreach (var flangeType in flangeTypeValues)
+                {
+                    if (table.HasData(dn, flangeType))
+                    {
+                        yield return (pn, dn, flangeType);
+                    }
+                }
+            }
+        }
+    }
 }

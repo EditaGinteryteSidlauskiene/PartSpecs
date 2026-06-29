@@ -1,4 +1,5 @@
 import type { FlangePositions } from "./flangeGeometry";
+import { isFlangeType05, isFlangeType11 } from "./flangeTypes";
 
 type FlangeBodyProps = {
     flangeType?: string;
@@ -6,49 +7,55 @@ type FlangeBodyProps = {
 };
 
 export default function FlangeBody({ flangeType, pos }: FlangeBodyProps) {
-    const isType05 = flangeType === "05";
-    const boreFill = isType05 ? "url(#type01-hatch)" : "none";
+    const isType05 = isFlangeType05(flangeType);
+    const isType11 = isFlangeType11(flangeType);
 
     const {
-        topY, bottomY, outerLeft, outerRight,
-        boltOuterLeft, boltOuterRight,
-        boltCenterLeft, boltCenterRight,
-        hubLeft, hubRight,
-        hubFaceLeft, hubFaceRight,
-        hubNeckLeft, hubNeckRight,
+        topY, bottomY, outerRight,
+        boltOuterRight,
+        boltCenterRight,
+        hubRight,
+        hubFaceRight,
+        hubNeckRight,
         boreLeft, boreRight,
+        neckTopY,
     } = pos;
 
     const thickness = bottomY - topY;
     const centerLineTopY = topY - 2;
     const stroke = "rgb(34, 33, 33)";
     const dashStroke = "rgb(100, 97, 97)";
+    
+    const lightningTopY = isType11 ? neckTopY : topY;
+    const hubFillStartX = boreRight;
 
     return (
         <>
-            {/* Left outer rim */}
-            <rect x={outerLeft} y={topY} width={boltOuterLeft - outerLeft} height={thickness} fill="url(#type01-hatch)" />
-            <line x1={outerLeft} y1={topY} x2={boltOuterLeft} y2={topY} stroke={stroke} strokeWidth="1" />
-            <line x1={outerLeft} y1={topY} x2={outerLeft} y2={bottomY} stroke={stroke} strokeWidth="1" />
-            <line x1={outerLeft} y1={bottomY} x2={boltOuterLeft} y2={bottomY} stroke={stroke} strokeWidth="1" />
-
-            {/* Left bolt zone */}
-            <rect x={boltOuterLeft} y={topY} width={hubLeft - boltOuterLeft} height={thickness} fill="none" />
-            <line x1={boltOuterLeft} y1={topY} x2={hubLeft} y2={topY} stroke={stroke} strokeWidth="1" />
-            <line x1={boltOuterLeft} y1={topY} x2={boltOuterLeft} y2={bottomY} stroke={stroke} strokeWidth="1" />
-            <line x1={boltOuterLeft} y1={bottomY} x2={hubLeft} y2={bottomY} stroke={stroke} strokeWidth="1" />
-            <line x1={hubLeft} y1={topY} x2={hubLeft} y2={bottomY} stroke={stroke} strokeWidth="1" />
-            <line x1={boltCenterLeft} y1={centerLineTopY} x2={boltCenterLeft} y2={bottomY} stroke={dashStroke} strokeWidth="0.75" strokeDasharray="8,3" />
-
-            {/* Left hub */}
-            <rect x={hubLeft} y={topY} width={boreLeft - hubLeft} height={thickness} fill="url(#type01-hatch)" />
-            <line x1={hubLeft} y1={topY} x2={hubFaceLeft} y2={topY} stroke={stroke} strokeWidth="1" />
-            <line x1={hubLeft} y1={topY} x2={hubLeft} y2={bottomY} stroke={stroke} strokeWidth="1" />
-            <line x1={hubLeft} y1={bottomY} x2={hubFaceLeft} y2={bottomY} stroke={stroke} strokeWidth="1" />
-            <line x1={hubFaceLeft} y1={topY} x2={hubNeckLeft} y2={topY} stroke={stroke} strokeWidth="1" />
-
             {/* Right hub */}
-            <rect x={boreRight} y={topY} width={hubRight - boreRight} height={thickness} fill="url(#type01-hatch)" />
+            <rect x={hubFillStartX} y={topY} width={hubRight - hubFillStartX} height={thickness} fill="url(#type01-hatch)" />
+            {isType05 ? (
+                // Type 5: lightning bolt at center, no bore area
+                <>
+                    <path d={`M${boreRight + 2},${topY} L${boreRight + 5},${topY + 8} L${boreRight},${topY + 12} L${boreRight + 5},${bottomY}`}
+                          fill="none" stroke={dashStroke} strokeWidth="1.5" />
+                    <path d={`M${boreRight + 2},${topY} L${boreRight + 5},${topY + 8} L${boreRight},${topY + 12} L${boreRight + 5},${bottomY}`}
+                          fill="none" stroke="rgb(255, 255, 255)" strokeWidth="0.5" opacity="0.6" />
+                </>
+            ) : (
+                <>
+                    {/* Bore line */}
+                    <line x1={boreRight} y1={topY} x2={boreRight} y2={bottomY} stroke={stroke} strokeWidth="1" />
+                    {/* Lightning bolt at bore middle to show missing half */}
+                    <path d={`M${(boreLeft + boreRight) / 2 + 2},${lightningTopY} L${(boreLeft + boreRight) / 2 + 5},${lightningTopY + 8} L${(boreLeft + boreRight) / 2},${lightningTopY + 12} L${(boreLeft + boreRight) / 2 + 5},${bottomY}`}
+                          fill="none" stroke={dashStroke} strokeWidth="1.5" />
+                    <path d={`M${(boreLeft + boreRight) / 2 + 2},${lightningTopY} L${(boreLeft + boreRight) / 2 + 5},${lightningTopY + 8} L${(boreLeft + boreRight) / 2},${lightningTopY + 12} L${(boreLeft + boreRight) / 2 + 5},${bottomY}`}
+                          fill="none" stroke="rgb(255, 255, 255)" strokeWidth="0.5" opacity="0.6" />
+                    {/* Bore fill area */}
+                    <rect x={(boreLeft + boreRight) / 2 + 4} y={topY} width={(boreRight - boreLeft) / 2 - 2} height={lightningTopY + 8 - lightningTopY} fill="none" />
+                    <rect x={(boreLeft + boreRight) / 2 + 1.5} y={lightningTopY + 8} width={(boreRight - boreLeft) / 2 - 1.5} height={(bottomY - (lightningTopY + 12)) / 2} fill="none" />
+                    <rect x={(boreLeft + boreRight) / 2 + 3.5} y={lightningTopY + (bottomY - (lightningTopY + 12)) / 2} width={(boreRight - boreLeft) / 2 - 1.5} height={bottomY - (lightningTopY + (bottomY - (lightningTopY + 12)) / 2)} fill="none" />
+                </>
+            )}
             <line x1={hubNeckRight} y1={topY} x2={hubFaceRight} y2={topY} stroke={stroke} strokeWidth="1" />
             <line x1={hubFaceRight} y1={topY} x2={hubRight} y2={topY} stroke={stroke} strokeWidth="1" />
             <line x1={hubRight} y1={topY} x2={hubRight} y2={bottomY} stroke={stroke} strokeWidth="1" />
@@ -67,11 +74,6 @@ export default function FlangeBody({ flangeType, pos }: FlangeBodyProps) {
             <line x1={boltOuterRight} y1={topY} x2={outerRight} y2={topY} stroke={stroke} strokeWidth="1" />
             <line x1={boltOuterRight} y1={bottomY} x2={outerRight} y2={bottomY} stroke={stroke} strokeWidth="1" />
             <line x1={outerRight} y1={topY} x2={outerRight} y2={bottomY} stroke={stroke} strokeWidth="1" />
-
-            {/* Bore */}
-            <rect x={boreLeft} y={topY} width={boreRight - boreLeft} height={thickness} fill={boreFill} />
-            {!isType05 && <line x1={boreLeft} y1={topY} x2={boreLeft} y2={bottomY} stroke={stroke} strokeWidth="1" />}
-            {!isType05 && <line x1={boreRight} y1={topY} x2={boreRight} y2={bottomY} stroke={stroke} strokeWidth="1" />}
         </>
     );
 }

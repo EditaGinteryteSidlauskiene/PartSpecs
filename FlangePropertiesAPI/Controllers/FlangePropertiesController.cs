@@ -39,4 +39,18 @@ public class FlangePropertiesController : ControllerBase
     {
         return Ok(Enum.GetValues(typeof(Dn)).Cast<Dn>().ToList());
     }
+
+    [HttpGet("validCombinations")]
+    public IActionResult GetValidCombinations()
+    {
+        var combinations = _flangePropertiesProvider.GetValidCombinations()
+            .Select(c => new ValidCombinationResponse
+            {
+                Pn = c.pn.ToString(),
+                Dn = c.dn.ToString(),
+                FlangeType = c.flangeType.ToString(),
+            });
+
+        return Ok(combinations);
+    }
 }

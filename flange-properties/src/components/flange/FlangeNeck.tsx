@@ -6,13 +6,14 @@ type FlangeNeckProps = {
 };
 
 export default function FlangeNeck({ flangeType, pos }: FlangeNeckProps) {
-    const { topY, hubNeckLeft, hubNeckRight, boreLeft, boreRight } = pos;
+    const { topY, hubNeckRight, boreLeft, boreRight, neckTopY, neckWall } = pos;
     const stroke = "rgb(34, 33, 33)";
+    const boreMid = (boreLeft + boreRight) / 2 + 2;
 
     if (flangeType === "01") {
         return (
             <>
-                <line x1={hubNeckLeft} y1={topY} x2={hubNeckRight} y2={topY} stroke={stroke} strokeWidth="1" />
+                <line x1={boreMid} y1={topY} x2={hubNeckRight} y2={topY} stroke={stroke} strokeWidth="1" />
             </>
         );
     }
@@ -28,48 +29,33 @@ export default function FlangeNeck({ flangeType, pos }: FlangeNeckProps) {
     if (flangeType === "05") {
         return (
             <>
-                <line x1={hubNeckLeft} y1={topY} x2={hubNeckRight} y2={topY} stroke={stroke} strokeWidth="1" />
+                <line x1={boreMid} y1={topY} x2={hubNeckRight} y2={topY} stroke={stroke} strokeWidth="1" />
             </>
         );
     }
 
     if (flangeType === "11") {
-        const neckWall = 2;
-        const neckTopY = topY - 29;
-        const junctionY1 = topY - 23;
-        const junctionY2 = topY - 25;
+        const junctionY1 = neckTopY + 6;
+        const junctionY2 = neckTopY + 4;
 
-        const neckBoreLeft = boreLeft - neckWall;
         const neckBoreRight = boreRight + neckWall;
+        const rightContour = `M${hubNeckRight},${topY} A3,3,0,0,1,${hubNeckRight - 3},${topY - 1.5} L${neckBoreRight + 0.5},${junctionY1} A3,5,0,0,1,${neckBoreRight},${junctionY2} L${neckBoreRight},${neckTopY}`;
 
         return (
             <>
-                {/* Left neck fill */}
-                <path d={`M${hubNeckLeft},${topY} A3,3,0,0,1,${hubNeckLeft + 3},${topY - 3} L${neckBoreLeft - 1},${junctionY1} A4,4,0,0,1,${neckBoreLeft},${junctionY2} L${neckBoreLeft},${neckTopY} L${boreLeft},${neckTopY} L${boreLeft},${topY} Z`}
-                    fill="url(#type01-hatch)" stroke="none" />
                 {/* Right neck fill */}
-                <path d={`M${hubNeckRight},${topY} A3,3,0,0,0,${hubNeckRight - 3},${topY - 3} L${neckBoreRight + 1},${junctionY1} A4,4,0,0,0,${neckBoreRight},${junctionY2} L${neckBoreRight},${neckTopY} L${boreRight},${neckTopY} L${boreRight},${topY} Z`}
+                <path d={`${rightContour} L${boreRight},${neckTopY} L${boreRight},${topY} Z`}
                     fill="url(#type01-hatch)" stroke="none" />
 
-                {/* Left side: arc, straight, arc, vertical */}
-                <path d={`M${hubNeckLeft},${topY} A3,3 0 0 0 ${hubNeckLeft + 3},${topY - 3}`} fill="none" stroke={stroke} strokeWidth="1" />
-                <line x1={hubNeckLeft + 3} y1={topY - 3} x2={neckBoreLeft - 1} y2={junctionY1} stroke={stroke} strokeWidth="1" />
-                <path d={`M${neckBoreLeft - 1},${junctionY1} A4,4 0 0 1 ${neckBoreLeft},${junctionY2}`} fill="none" stroke={stroke} strokeWidth="1" />
-                <line x1={neckBoreLeft} y1={junctionY2} x2={neckBoreLeft} y2={neckTopY} stroke={stroke} strokeWidth="1" />
 
-                {/* Right side: arc, straight, arc, vertical */}
-                <path d={`M${hubNeckRight},${topY} A3,3 0 0 1 ${hubNeckRight - 3},${topY - 3}`} fill="none" stroke={stroke} strokeWidth="1" />
-                <line x1={hubNeckRight - 3} y1={topY - 3} x2={neckBoreRight + 1} y2={junctionY1} stroke={stroke} strokeWidth="1" />
-                <path d={`M${neckBoreRight + 1},${junctionY1} A4,4 0 0 0 ${neckBoreRight},${junctionY2}`} fill="none" stroke={stroke} strokeWidth="1" />
-                <line x1={neckBoreRight} y1={junctionY2} x2={neckBoreRight} y2={neckTopY} stroke={stroke} strokeWidth="1" />
+                {/* Right side contour */}
+                <path d={rightContour} fill="none" stroke={stroke} strokeWidth="1" strokeLinejoin="round" strokeLinecap="round" />
 
-                {/* Top: left end face + bore opening + right end face (horizontal) */}
-                <line x1={neckBoreLeft} y1={neckTopY} x2={boreLeft} y2={neckTopY} stroke={stroke} strokeWidth="1" />
-                <line x1={boreLeft} y1={neckTopY} x2={boreRight} y2={neckTopY} stroke={stroke} strokeWidth="1" />
+                {/* Top: bore opening from center to right + right end face (horizontal) */}
+                <line x1={boreMid} y1={neckTopY} x2={boreRight} y2={neckTopY} stroke={stroke} strokeWidth="1" />
                 <line x1={boreRight} y1={neckTopY} x2={neckBoreRight} y2={neckTopY} stroke={stroke} strokeWidth="1" />
 
-                {/* Bore wall extensions upward through the neck */}
-                <line x1={boreLeft} y1={neckTopY} x2={boreLeft} y2={topY} stroke={stroke} strokeWidth="1" />
+                {/* Right bore wall extension upward through the neck */}
                 <line x1={boreRight} y1={neckTopY} x2={boreRight} y2={topY} stroke={stroke} strokeWidth="1" />
             </>
         );
