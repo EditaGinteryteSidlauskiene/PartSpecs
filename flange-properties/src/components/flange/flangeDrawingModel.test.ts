@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createFlangeDrawingModel } from "./flangeDrawingModel.ts";
+import { createFlangeDrawingModel } from "./engine/flangeDrawingModel.ts";
 
 const buildMeasures = (extra: Record<string, { value: number }> = {}) => ({
     D: { value: 220 },

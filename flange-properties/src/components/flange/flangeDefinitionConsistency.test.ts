@@ -1,13 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { FACE_LETTERS, getFlangeFaceState } from "./flangeFaceRules.ts";
+import { FACE_LETTERS, getFlangeFaceState } from "./engine/flangeFaceRules.ts";
 import {
     BODY_RENDERER_KINDS,
     DIMENSION_GROUP_RENDERER_KEYS,
     FACE_RENDERING_MODES,
     NECK_RENDERER_KINDS,
-} from "./flangeRendererKeys.ts";
-import { getFlangeTypeDefinition, KNOWN_FLANGE_TYPES, type FlangeTypeDefinition } from "./flangeTypes.ts";
+} from "./engine/flangeRendererKeys.ts";
+import { getFlangeTypeDefinition, KNOWN_FLANGE_TYPES, type FlangeTypeDefinition } from "./engine/flangeTypes.ts";
 
 const flatStandardTypes = ["01", "02", "04"] as const;
 const blindTypes = ["05"] as const;

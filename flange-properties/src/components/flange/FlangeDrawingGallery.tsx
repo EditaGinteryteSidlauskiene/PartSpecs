@@ -1,9 +1,15 @@
 import "./FlangeDrawingGallery.css";
+import { downloadSvgFile } from "./downloadSvgFile";
 import FlangeDrawing from "./FlangeDrawing";
-import { createFlangeDrawingModel } from "./flangeDrawingModel";
-import { FACE_LETTERS } from "./flangeFaceRules";
-import type { FlangeLookupResponse } from "./flangeMeasures";
-import { getFlangeTypeDefinition, KNOWN_FLANGE_TYPES, type FlangeTypeCode } from "./flangeTypes";
+import {
+    createFlangeDrawingModel,
+    FACE_LETTERS,
+    getFlangeTypeDefinition,
+    KNOWN_FLANGE_TYPES,
+    serializeFlangeDrawing,
+    type FlangeLookupResponse,
+    type FlangeTypeCode,
+} from "./engine/index";
 
 type GalleryCase = {
     flangeType: string;
@@ -96,6 +102,19 @@ const getFaceLabel = (face: string | null): string => {
     return match?.label ?? `Face ${face}`;
 };
 
+const getExportFileName = (flangeType: string, face: string | null): string =>
+    `flange-type-${flangeType}-${face ? `face-${face}` : "no-face"}.svg`;
+
+const exportSvg = (flangeType: string, face: string | null, response: FlangeLookupResponse): void => {
+    const svg = serializeFlangeDrawing({
+        flangeType,
+        face,
+        response,
+    });
+
+    downloadSvgFile(getExportFileName(flangeType, face), svg);
+};
+
 export default function FlangeDrawingGallery() {
     return (
         <main className="flange-drawing-gallery">
@@ -116,7 +135,16 @@ export default function FlangeDrawingGallery() {
 
                     return (
                         <section className="flange-drawing-gallery__preview" key={`${flangeType}-${face ?? "no-face"}`}>
-                            <h3>{title}</h3>
+                            <div className="flange-drawing-gallery__preview-header">
+                                <h3>{title}</h3>
+                                <button
+                                    className="flange-drawing-gallery__export"
+                                    type="button"
+                                    onClick={() => exportSvg(flangeType, face, response)}
+                                >
+                                    Export SVG
+                                </button>
+                            </div>
                             <div className="flange-drawing-gallery__drawing">
                                 <FlangeDrawing model={model} response={response} availableHeight={250} />
                             </div>

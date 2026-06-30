@@ -66,6 +66,23 @@
     font-size: 0.9rem;
 }
 
+.lookup-export-svg {
+    align-self: flex-start;
+    border: 1px solid #b8c2d1;
+    border-radius: 4px;
+    background: #f9fbff;
+    color: #243143;
+    font-size: 0.85rem;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+    padding: 0.45rem 0.65rem;
+    cursor: pointer;
+}
+
+.lookup-export-svg:hover {
+    background: #eef4ff;
+}
+
 .lookup-drawing-svg {
     display: block;
     width: auto;

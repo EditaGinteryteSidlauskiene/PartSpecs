@@ -1,16 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
-import FlangeDrawing from "./FlangeDrawing.tsx";
-import {
-    createFlangeDrawingModel,
-    type FlangeLookupResponse,
-} from "./engine/flangeDrawingEngine.ts";
+import { buildFlangeDrawingVectorDocument } from "./engine/flangeDrawingVectors.ts";
+import { createFlangeDrawingModel } from "./engine/flangeDrawingModel.ts";
 import { FACE_LETTERS } from "./engine/flangeFaceRules.ts";
+import type { FlangeLookupResponse } from "./engine/flangeMeasures.ts";
 import { getFlangeTypeDefinition, KNOWN_FLANGE_TYPES, type FlangeTypeCode } from "./engine/flangeTypes.ts";
+import { serializeSvgVectorDocument } from "./engine/svgVectorSerializer.ts";
 
-const fallbackMessage = "Drawing not implemented";
 const faceCases: Array<string | null> = [null, ...FACE_LETTERS];
 
 const flatThicknessSamples: Partial<Record<FlangeTypeCode, number>> = {
@@ -62,35 +58,39 @@ const createSampleResponse = (flangeType: FlangeTypeCode): FlangeLookupResponse 
     };
 };
 
-const renderDrawing = (flangeType: string, face: string | null, response: FlangeLookupResponse) => {
+const serializeDrawing = (flangeType: string, face: string | null, response: FlangeLookupResponse): string => {
     const model = createFlangeDrawingModel({
         flangeType,
         face,
         measures: response.measures,
     });
+    const document = buildFlangeDrawingVectorDocument(model, response);
 
-    return renderToStaticMarkup(createElement(FlangeDrawing, { model, response, availableHeight: 250 }));
+    return serializeSvgVectorDocument(document);
 };
 
-test("every known flange type renders with no face and faces A-H", () => {
+test("every known flange type serializes with no face and faces A-H without React", () => {
     for (const flangeType of KNOWN_FLANGE_TYPES) {
         const response = createSampleResponse(flangeType);
 
         for (const face of faceCases) {
             const label = `type ${flangeType}, face ${face ?? "none"}`;
-            let markup = "";
+            let svg = "";
 
             assert.doesNotThrow(() => {
-                markup = renderDrawing(flangeType, face, response);
+                svg = serializeDrawing(flangeType, face, response);
             }, label);
 
-            assert.equal(markup.includes(fallbackMessage), false, `${label} should render the supported drawing`);
-            assert.match(markup, /<svg/, `${label} should produce SVG markup`);
+            assert.match(svg, /^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg"/, `${label} should serialize an SVG root`);
+            assert.match(svg, /viewBox="[-\d.]+ [-\d.]+ [\d.]+ [\d.]+"/, `${label} should serialize a viewBox`);
+            assert.match(svg, /<defs>[\s\S]*id="type01-hatch"[\s\S]*id="type01-arrowhead-green-rev"[\s\S]*<\/defs>/, `${label} should serialize shared defs`);
+            assert.match(svg, /<g>[\s\S]*<(line|rect|path|text)\b/, `${label} should serialize drawable elements`);
+            assert.equal(svg.includes("Drawing not implemented"), false, `${label} should not serialize fallback text`);
         }
     }
 });
 
-test("unknown flange type renders the unsupported fallback message", () => {
+test("unknown flange type serializes the unsupported fallback without React", () => {
     const response: FlangeLookupResponse = {
         count: { value: 8 },
         boltSize: "M20",
@@ -102,12 +102,10 @@ test("unknown flange type renders the unsupported fallback message", () => {
             B1: { value: 100 },
         },
     };
+    const svg = serializeDrawing("99", null, response);
 
-    let markup = "";
-
-    assert.doesNotThrow(() => {
-        markup = renderDrawing("99", null, response);
-    });
-
-    assert.match(markup, /Drawing not implemented for flange type 99/);
+    assert.match(svg, /^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg"/);
+    assert.match(svg, /viewBox="[-\d.]+ [-\d.]+ [\d.]+ [\d.]+"/);
+    assert.match(svg, /<defs>[\s\S]*id="type01-hatch"[\s\S]*<\/defs>/);
+    assert.match(svg, /Drawing not implemented for flange type 99\./);
 });

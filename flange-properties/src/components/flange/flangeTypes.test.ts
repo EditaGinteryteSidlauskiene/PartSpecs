@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { getFlangeTypeDefinition } from "./flangeTypes.ts";
+import { getFlangeTypeDefinition } from "./engine/flangeTypes.ts";
 
 test("type 01 resolves the supported drawing behavior", () => {
     const definition = getFlangeTypeDefinition("01");

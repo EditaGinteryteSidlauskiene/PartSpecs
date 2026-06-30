@@ -1,9 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { downloadSvgFile } from "./downloadSvgFile";
 import FlangeDrawing from "./FlangeDrawing";
-import { createFlangeDrawingModel } from "./flangeDrawingModel";
-import { isValidFaceLetter } from "./flangeFaceRules";
-import type { FlangeLookupResponse } from "./flangeMeasures";
-import { normalizeFlangeType } from "./flangeTypes";
+import {
+    buildFlangeSvgFilename,
+    createFlangeDrawingModel,
+    isValidFaceLetter,
+    normalizeFlangeType,
+    serializeFlangeDrawing,
+    type FlangeLookupResponse,
+} from "./engine/index";
 import "./flangeMeasureLookup.css";
 
 type Combination = {
@@ -210,6 +215,28 @@ export default function FlangeMeasureLookup() {
         ? `Some drawing dimensions are using fallback values because required measures are missing: ${drawingModel.validation.missingMeasures.join(", ")}`
         : null;
 
+    const exportCurrentDrawing = () => {
+        if (!effectiveCombination || !response) {
+            return;
+        }
+
+        const svg = serializeFlangeDrawing({
+            flangeType: effectiveCombination.flangeType,
+            face: activeFace,
+            response,
+        });
+
+        downloadSvgFile(
+            buildFlangeSvgFilename({
+                flangeType: effectiveCombination.flangeType,
+                dn: effectiveCombination.dn,
+                pn: effectiveCombination.pn,
+                face: activeFace,
+            }),
+            svg
+        );
+    };
+
     const filteredCombinations = useMemo(() => {
         return allCombinations.filter((row) => {
             const matchesPn = activePnFilter === null || row.pn === activePnFilter;
@@ -398,6 +425,15 @@ export default function FlangeMeasureLookup() {
                     >
                         {missingMeasureWarning && (
                             <p className="lookup-drawing-warning">{missingMeasureWarning}</p>
+                        )}
+                        {effectiveCombination && (
+                            <button
+                                className="lookup-export-svg"
+                                type="button"
+                                onClick={exportCurrentDrawing}
+                            >
+                                Export SVG
+                            </button>
                         )}
                         <FlangeDrawing model={drawingModel} response={response} availableHeight={availableDrawingHeight} />
                     </div>

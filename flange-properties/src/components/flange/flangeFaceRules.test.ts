@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { getFlangeFaceState } from "./flangeFaceRules.ts";
+import { getFlangeFaceState } from "./engine/flangeFaceRules.ts";
 
 test("empty face input resolves to no-face state", () => {
     const state = getFlangeFaceState(null);
