@@ -15,6 +15,11 @@ export default function FlangeDrawing({ model, response, availableHeight }: Flan
     const svgStyle = availableHeight
         ? { height: `${Math.max(120, availableHeight - 24)}px`, width: "auto", maxWidth: "100%" }
         : undefined;
+    const unsupportedMessage = model.typeDefinition?.isSupportedForDrawing === false
+        ? model.typeDefinition.unsupportedDrawingMessage ?? "Drawing not implemented for this flange type."
+        : model.flangeType && !model.typeDefinition
+            ? `Drawing not implemented for flange type ${model.flangeType}.`
+            : null;
 
     return (
         <svg
@@ -44,16 +49,32 @@ export default function FlangeDrawing({ model, response, availableHeight }: Flan
             </defs>
 
             <g>
-                <FlangeNeck flangeType={model.flangeType} pos={model.pos} />
-                <FlangeBody flangeType={model.flangeType} pos={model.pos} />
-                <FlangeFace face={model.face} flangeType={model.flangeType} pos={model.pos} />
-                <FlangeDimensions
-                    response={response}
-                    flangeType={model.flangeType}
-                    pos={model.pos}
-                    rails={model.rails}
-                    faceProfile={model.faceProfile}
-                />
+                {unsupportedMessage ? (
+                    <text
+                        x={model.bounds.minX + model.bounds.width / 2}
+                        y={model.bounds.minY + model.bounds.height / 2}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        fill="rgb(34, 33, 33)"
+                        fontSize="12"
+                    >
+                        {unsupportedMessage}
+                    </text>
+                ) : (
+                    <>
+                        <FlangeNeck typeDefinition={model.typeDefinition} halfSection={model.halfSection} pos={model.pos} />
+                        <FlangeBody typeDefinition={model.typeDefinition} halfSection={model.halfSection} />
+                        <FlangeFace faceState={model.faceState} halfSection={model.halfSection} pos={model.pos} typeDefinition={model.typeDefinition} />
+                        <FlangeDimensions
+                            response={response}
+                            typeDefinition={model.typeDefinition}
+                            halfSection={model.halfSection}
+                            pos={model.pos}
+                            rails={model.rails}
+                            faceProfile={model.faceProfile}
+                        />
+                    </>
+                )}
             </g>
         </svg>
     );

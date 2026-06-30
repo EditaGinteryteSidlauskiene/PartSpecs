@@ -42,6 +42,7 @@
 
 .lookup-drawing-panel {
     display: flex;
+    flex-direction: column;
     justify-content: flex-start;
     align-items: flex-start;
     width: 100%;
@@ -53,6 +54,16 @@
     box-sizing: border-box;
     min-height: 0;
     overflow: hidden;
+}
+
+.lookup-drawing-warning {
+    margin: 0 0 0.5rem;
+    color: #8a5a00;
+    background: #fff8e1;
+    border: 1px solid #f0d98c;
+    border-radius: 6px;
+    padding: 0.45rem 0.6rem;
+    font-size: 0.9rem;
 }
 
 .lookup-drawing-svg {

@@ -5,6 +5,7 @@ import Sidebar from "./layout/Sidebar";
 import { BrowserRouter, Route, Routes } from "react-router";
 import HomePage from "./pages/HomePage";
 import FlangesPage from "./pages/FlangesPage";
+import FlangeDrawingGallery from "./components/flange/FlangeDrawingGallery";
 
 function App() {
 
@@ -21,6 +22,7 @@ function App() {
               <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/flanges" element={<FlangesPage />} />
+                <Route path="/flange-drawing-gallery" element={<FlangeDrawingGallery />} />
               </Routes>
 
 

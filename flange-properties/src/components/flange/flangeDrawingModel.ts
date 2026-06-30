@@ -1,6 +1,7 @@
-import { computeFlangePositions, type FlangePositions } from "./flangeGeometry";
-import type { FlangeMeasures } from "./flangeMeasures";
-import { isFlatFlangeType, isFlangeType11, normalizeFlangeType } from "./flangeTypes";
+import { computeFlangePositions, type FlangePositions } from "./flangeGeometry.ts";
+import type { FlangeMeasures } from "./flangeMeasures.ts";
+import { getFlangeFaceState, type FaceDimensionGroupKey, type FlangeFaceState } from "./flangeFaceRules.ts";
+import { getFlangeTypeDefinition, normalizeFlangeType, type FlangeTypeDefinition } from "./flangeTypes.ts";
 
 export type FlangeDrawingBounds = {
     minX: number;
@@ -33,10 +34,12 @@ export type FlangeDimensionRails = {
 };
 
 export type FlangeFaceProfile = {
+    isNoFace: boolean;
     isFaceA: boolean;
     showsF1: boolean;
     showsD1: boolean;
     showsF2: boolean;
+    dimensionGroups: FaceDimensionGroupKey[];
     annotationScale: number;
     f1AnnotX: number;
     f1ExtLeft: number;
@@ -46,12 +49,37 @@ export type FlangeFaceProfile = {
     f2GuideLowerStartX: number;
 };
 
+export type FlangeHalfSectionAnchors = {
+    breakLineX: number;
+    boreWallX: number;
+    hubFaceX: number;
+    hubNeckX: number;
+    hubOuterX: number;
+    boltCenterX: number;
+    boltOuterX: number;
+    outerEdgeX: number;
+    topY: number;
+    bottomY: number;
+    neckTopY: number;
+    neckBoreWallX: number;
+    neckOuterX: number;
+};
+
+export type FlangeDrawingValidation = {
+    missingMeasures: string[];
+    hasMissingRequiredMeasures: boolean;
+};
+
 export type FlangeDrawingModel = {
     flangeType?: string;
-    face: string;
+    face: string | null;
+    typeDefinition?: FlangeTypeDefinition;
+    faceState: FlangeFaceState;
+    halfSection: FlangeHalfSectionAnchors;
     pos: FlangePositions;
     rails: FlangeDimensionRails;
     faceProfile: FlangeFaceProfile;
+    validation: FlangeDrawingValidation;
     bounds: FlangeDrawingBounds;
 };
 
@@ -62,8 +90,9 @@ type CreateFlangeDrawingModelInput = {
 };
 
 const computeDimensionRails = (pos: FlangePositions, flangeType?: string): FlangeDimensionRails => {
-    const isType11 = isFlangeType11(flangeType);
-    const pipeBore = isType11 ? pos.neckTopY - 26 : undefined;
+    const definition = getFlangeTypeDefinition(flangeType);
+    const hasNeckDimensions = definition?.dimensionGroups.includes("type11") ?? false;
+    const pipeBore = hasNeckDimensions ? pos.neckTopY - 26 : undefined;
     const neckOuter = pipeBore !== undefined ? pipeBore - 15 : undefined;
     const boltCircle = neckOuter !== undefined ? neckOuter - 15 : pos.topY - 12;
 
@@ -85,27 +114,20 @@ const computeDimensionRails = (pos: FlangePositions, flangeType?: string): Flang
         right: {
             thickness: pos.outerRight + 10,
             thicknessText: pos.outerRight + 18,
-            totalHeight: isType11 ? pos.outerRight + 30 : undefined,
-            totalHeightText: isType11 ? pos.outerRight + 40 : undefined,
+            totalHeight: hasNeckDimensions ? pos.outerRight + 30 : undefined,
+            totalHeightText: hasNeckDimensions ? pos.outerRight + 40 : undefined,
         },
     };
 };
 
-const computeFaceProfile = (pos: FlangePositions, face: string): FlangeFaceProfile => {
-    const normalizedFace = face.toUpperCase();
-    const isFaceA = normalizedFace === "A";
-    const showsF1 = normalizedFace === "B" || normalizedFace === "D" || normalizedFace === "F" || normalizedFace === "G";
-    const showsD1 = normalizedFace === "B" || normalizedFace === "G";
-    const showsF2 = normalizedFace === "C" || normalizedFace === "E" || normalizedFace === "G";
+const computeFaceProfile = (pos: FlangePositions, face: string | null): FlangeFaceProfile => {
+    const faceState = getFlangeFaceState(face);
     const geometryWidth = pos.outerRight * 2 - pos.centerX * 2;
     const scaleMultiplier = geometryWidth > 0 ? (350 * 1.36) / geometryWidth : 1;
     const faceRelativeX = (offset: number): number => pos.hubFaceRight - pos.hubFaceWidth * (offset / 26);
 
     return {
-        isFaceA,
-        showsF1,
-        showsD1,
-        showsF2,
+        ...faceState,
         annotationScale: scaleMultiplier,
         f1AnnotX: (pos.hubFaceRight + pos.hubRight) / 2,
         f1ExtLeft: pos.hubFaceRight + 2 * scaleMultiplier,
@@ -116,11 +138,82 @@ const computeFaceProfile = (pos: FlangePositions, face: string): FlangeFaceProfi
     };
 };
 
+const computeHalfSectionAnchors = (pos: FlangePositions): FlangeHalfSectionAnchors => ({
+    breakLineX: (pos.boreLeft + pos.boreRight) / 2 + 5,
+    boreWallX: pos.boreRight,
+    hubFaceX: pos.hubFaceRight,
+    hubNeckX: pos.hubNeckRight,
+    hubOuterX: pos.hubRight,
+    boltCenterX: pos.boltCenterRight,
+    boltOuterX: pos.boltOuterRight,
+    outerEdgeX: pos.outerRight,
+    topY: pos.topY,
+    bottomY: pos.bottomY,
+    neckTopY: pos.neckTopY,
+    neckBoreWallX: pos.boreRight + pos.neckWall,
+    neckOuterX: pos.hubNeckRight - 1,
+});
+
+const hasMeasureValue = (measures: FlangeMeasures | undefined, keys: string[]): boolean => {
+    if (!measures || keys.length === 0) {
+        return false;
+    }
+
+    return keys.some((key) => {
+        const exactValue = measures[key]?.value;
+        const lowerValue = measures[key.toLowerCase()]?.value;
+
+        return exactValue !== undefined && exactValue !== null
+            || lowerValue !== undefined && lowerValue !== null;
+    });
+};
+
+const computeValidation = (
+    measures: FlangeMeasures | undefined,
+    typeDefinition?: FlangeTypeDefinition,
+): FlangeDrawingValidation => {
+    if (!typeDefinition) {
+        return {
+            missingMeasures: [],
+            hasMissingRequiredMeasures: false,
+        };
+    }
+
+    const requiredKeyGroups = [
+        typeDefinition.outerDiameterKeys,
+        typeDefinition.boltCircleKeys,
+        typeDefinition.boltHoleKeys,
+        typeDefinition.thicknessKeys,
+        ...(typeDefinition.hasBore ? [typeDefinition.boreDiameterKeys] : []),
+        ...(typeDefinition.hasNeck
+            ? [
+                typeDefinition.neckPipeBoreKeys,
+                typeDefinition.neckOuterKeys,
+                typeDefinition.neckWallKeys,
+                typeDefinition.neckStepKeys,
+                typeDefinition.neckTotalHeightKeys,
+                typeDefinition.radiusKeys,
+            ]
+            : []),
+    ];
+
+    const missingMeasures = Array.from(new Set(
+        requiredKeyGroups
+            .filter((keys) => keys.length > 0 && !hasMeasureValue(measures, keys))
+            .map((keys) => keys[0])
+    ));
+
+    return {
+        missingMeasures,
+        hasMissingRequiredMeasures: missingMeasures.length > 0,
+    };
+};
+
 const computeBounds = (pos: FlangePositions, rails: FlangeDimensionRails, flangeType?: string): FlangeDrawingBounds => {
-    const isFlatType = isFlatFlangeType(flangeType);
+    const definition = getFlangeTypeDefinition(flangeType);
     const leftPadding = 30;
-    const rightPadding = isFlangeType11(flangeType) ? 70 : 45;
-    const topPadding = isFlatType ? 150 : 60;
+    const rightPadding = definition?.hasNeck ? 70 : 45;
+    const topPadding = definition?.isFlat ?? false ? 150 : 60;
     const bottomPadding = 40;
 
     const minX = Math.floor(pos.centerX - leftPadding);
@@ -138,17 +231,25 @@ const computeBounds = (pos: FlangePositions, rails: FlangeDimensionRails, flange
 
 export function createFlangeDrawingModel(input: CreateFlangeDrawingModelInput): FlangeDrawingModel {
     const flangeType = normalizeFlangeType(input.flangeType);
-    const face = input.face ?? "A";
+    const face = input.face?.trim().length ? input.face.trim().toUpperCase() : null;
+    const typeDefinition = getFlangeTypeDefinition(flangeType);
+    const faceState = getFlangeFaceState(face);
     const pos = computeFlangePositions(input.measures, flangeType);
+    const halfSection = computeHalfSectionAnchors(pos);
     const rails = computeDimensionRails(pos, flangeType);
     const faceProfile = computeFaceProfile(pos, face);
+    const validation = computeValidation(input.measures, typeDefinition);
 
     return {
         flangeType,
         face,
+        typeDefinition,
+        faceState,
+        halfSection,
         pos,
         rails,
         faceProfile,
+        validation,
         bounds: computeBounds(pos, rails, flangeType),
     };
 }

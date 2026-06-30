@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import FlangeDrawing from "./FlangeDrawing";
 import { createFlangeDrawingModel } from "./flangeDrawingModel";
+import { isValidFaceLetter } from "./flangeFaceRules";
 import type { FlangeLookupResponse } from "./flangeMeasures";
 import { normalizeFlangeType } from "./flangeTypes";
 import "./flangeMeasureLookup.css";
@@ -10,8 +11,6 @@ type Combination = {
     dn: string;
     flangeType: string;
 };
-
-const FACE_VALUES = ["A", "B", "C", "D", "E", "F", "G", "H"];
 
 const formatPnLabel = (value: string): string => {
     if (value === "Pn002_5") {
@@ -48,7 +47,7 @@ const isFlangeTypeInputValid = (input: string, flangeTypeValues: string[]): bool
 };
 
 const isFaceInputValid = (input: string): boolean => {
-    return input.length === 0 || FACE_VALUES.includes(input);
+    return input.length === 0 || isValidFaceLetter(input);
 };
 
 export default function FlangeMeasureLookup() {
@@ -130,7 +129,7 @@ export default function FlangeMeasureLookup() {
     const isFaceValid = isFaceInputValid(faceInput);
     const hasAnyInvalidInput = !isPnValid || !isDnValid || !isFlangeTypeValid || !isFaceValid;
 
-    const activeFace = faceInput.length === 0 ? "A" : isFaceValid ? faceInput : null;
+    const activeFace = faceInput.length === 0 ? null : isFaceValid ? faceInput : null;
 
     const activePnFilter = isPnValid && pnInput.length > 0 ? pnInput : null;
     const activeDnFilter = isDnValid && dnInput.length > 0 ? dnInput : null;
@@ -207,6 +206,9 @@ export default function FlangeMeasureLookup() {
         }),
         [response?.measures, effectiveCombination?.flangeType, activeFace]
     );
+    const missingMeasureWarning = drawingModel.validation.hasMissingRequiredMeasures
+        ? `Some drawing dimensions are using fallback values because required measures are missing: ${drawingModel.validation.missingMeasures.join(", ")}`
+        : null;
 
     const filteredCombinations = useMemo(() => {
         return allCombinations.filter((row) => {
@@ -394,6 +396,9 @@ export default function FlangeMeasureLookup() {
                         className="lookup-drawing-panel"
                         style={availableDrawingHeight ? { height: `${availableDrawingHeight}px` } : undefined}
                     >
+                        {missingMeasureWarning && (
+                            <p className="lookup-drawing-warning">{missingMeasureWarning}</p>
+                        )}
                         <FlangeDrawing model={drawingModel} response={response} availableHeight={availableDrawingHeight} />
                     </div>
 

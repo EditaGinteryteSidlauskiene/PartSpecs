@@ -1,43 +1,44 @@
 import { BoltHoleCallout, DiameterDimension, ExtensionLine, VerticalDimension } from "./FlangeDimensionPrimitives";
-import type { FlangeDimensionRails } from "./flangeDrawingModel";
+import type { FlangeDimensionRails, FlangeHalfSectionAnchors } from "./flangeDrawingModel";
 import type { FlangePositions } from "./flangeGeometry";
 import { getMeasureValue, type FlangeLookupResponse } from "./flangeMeasures";
-import { isFlangeType05, isFlangeType11 } from "./flangeTypes";
+import type { FlangeTypeDefinition } from "./flangeTypes";
 
 type FlangeCommonDimensionsProps = {
     response: FlangeLookupResponse | null;
-    flangeType?: string;
+    typeDefinition?: FlangeTypeDefinition;
+    halfSection: FlangeHalfSectionAnchors;
     pos: FlangePositions;
     rails: FlangeDimensionRails;
     cLowerLineY: number;
     color: string;
 };
 
-export default function FlangeCommonDimensions({ response, flangeType, pos, rails, cLowerLineY, color }: FlangeCommonDimensionsProps) {
-    const isType05 = isFlangeType05(flangeType);
-    const isType11 = isFlangeType11(flangeType);
+export default function FlangeCommonDimensions({ response, typeDefinition, halfSection, pos, rails, cLowerLineY, color }: FlangeCommonDimensionsProps) {
+    const definition = typeDefinition;
 
     const {
         centerX,
         topY,
         bottomY,
-        outerRight,
         boltOuterRight,
-        boltCenterRight,
         hubRight,
-        hubFaceRight,
-        boreRight,
     } = pos;
 
     const measureValue = (...keys: string[]): string | number => getMeasureValue(response?.measures, ...keys);
     const kLineY = rails.top.boltCircle;
-    const kExtTopY = isType11 ? kLineY - 4 : topY - 16;
+    const kExtTopY = definition?.type === "11" ? kLineY - 4 : topY - 16;
+    const boreDiameterKeys = definition?.boreDiameterKeys ?? ["B1", "B2", "B3", "4", "5", "6"];
+    const outerDiameterKeys = definition?.outerDiameterKeys ?? ["D", "0"];
+    const thicknessKeys = definition?.thicknessKeys ?? ["C1", "C2", "C3", "C4", "7", "8", "9", "10"];
+    const boltCircleKeys = definition?.boltCircleKeys ?? ["K", "1"];
+    const boltHoleKeys = definition?.boltHoleKeys ?? ["L", "2"];
 
     return (
         <>
             {/* Bolt hole count and size */}
             <BoltHoleCallout
-                countAndDiameterLabel={`${response?.count?.value ?? response?.count?.instruction ?? "-"}×⌀${measureValue("L", "2")}`}
+                countAndDiameterLabel={`${response?.count?.value ?? response?.count?.instruction ?? "-"}×⌀${measureValue(...boltHoleKeys)}`}
                 boltSizeLabel={response?.boltSize ?? "-"}
                 textX={hubRight - 18}
                 textY={rails.bottom.boltHoleText}
@@ -47,56 +48,56 @@ export default function FlangeCommonDimensions({ response, flangeType, pos, rail
                 extensionY1={bottomY + 2}
                 extensionY2={bottomY + 19}
                 leftArrowStartX={hubRight - 35}
-                rightArrowStartX={boltOuterRight + 9}
+                rightArrowStartX={halfSection.boltOuterX + 9}
                 arrowY={rails.bottom.boltHoleArrow}
                 color={color}
             />
 
             {/* K diameter */}
             <DiameterDimension
-                label={`⌀${measureValue("K", "1")}`}
+                label={`⌀${measureValue(...boltCircleKeys)}`}
                 centerX={centerX}
-                targetX={boltCenterRight}
+                targetX={halfSection.boltCenterX}
                 y={kLineY}
-                extensionX={boltCenterRight}
+                extensionX={halfSection.boltCenterX}
                 extensionY1={topY - 5}
                 extensionY2={kExtTopY}
                 color={color}
             />
 
             {/* Bore B diameter */}
-            {!isType05 && !isType11 && (
+            {definition?.showCommonBoreDiameter !== false && (
                 <>
                     <DiameterDimension
-                        label={`⌀${measureValue("B1", "B2", "B3", "4", "5", "6")}`}
+                        label={`⌀${measureValue(...boreDiameterKeys)}`}
                         centerX={centerX}
-                        targetX={boreRight}
+                        targetX={halfSection.boreWallX}
                         y={rails.bottom.boreDiameter}
                         color={color}
                     />
-                    <ExtensionLine x={boreRight} y1={bottomY + 5} y2={bottomY + 22} color={color} />
+                    <ExtensionLine x={halfSection.boreWallX} y1={bottomY + 5} y2={bottomY + 22} color={color} />
                 </>
             )}
 
             {/* D outer diameter */}
             <DiameterDimension
-                label={`⌀${isType11 ? measureValue("D", "0", "A") : measureValue("D", "0")}`}
+                label={`⌀${measureValue(...outerDiameterKeys)}`}
                 centerX={centerX}
-                targetX={outerRight}
+                targetX={halfSection.outerEdgeX}
                 y={rails.bottom.outerDiameter}
                 color={color}
             />
-            <ExtensionLine x={outerRight} y1={bottomY + 5} y2={bottomY + 36} color={color} />
+            <ExtensionLine x={halfSection.outerEdgeX} y1={bottomY + 5} y2={bottomY + 36} color={color} />
 
             {/* C thickness */}
             <VerticalDimension
-                label={`${isType11 ? measureValue("C2") : measureValue("C1", "C2", "C3", "C4", "7", "8", "9", "10")}`}
+                label={`${measureValue(...thicknessKeys)}`}
                 x={rails.right.thickness}
                 textX={rails.right.thicknessText}
                 y1={topY}
                 y2={cLowerLineY}
-                topExtensionX1={outerRight + 3}
-                bottomExtensionX1={hubFaceRight - 1}
+                topExtensionX1={halfSection.outerEdgeX + 3}
+                bottomExtensionX1={halfSection.hubFaceX - 1}
                 extensionX2={rails.right.thickness + 2}
                 color={color}
             />

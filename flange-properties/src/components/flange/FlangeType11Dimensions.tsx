@@ -1,10 +1,13 @@
 import { DiameterDimension, ExtensionLine, NeckStepDimension, NeckWallDimension, RadiusLeaderDimension, VerticalDimension } from "./FlangeDimensionPrimitives";
-import type { FlangeDimensionRails, FlangeFaceProfile } from "./flangeDrawingModel";
+import type { FlangeDimensionRails, FlangeFaceProfile, FlangeHalfSectionAnchors } from "./flangeDrawingModel";
 import type { FlangePositions } from "./flangeGeometry";
 import { getMeasureValue, getMeasureValueOrInstruction, type FlangeMeasures } from "./flangeMeasures";
+import type { FlangeTypeDefinition } from "./flangeTypes";
 
 type FlangeType11DimensionsProps = {
     measures?: FlangeMeasures;
+    typeDefinition?: FlangeTypeDefinition;
+    halfSection: FlangeHalfSectionAnchors;
     pos: FlangePositions;
     rails: FlangeDimensionRails;
     faceProfile: FlangeFaceProfile;
@@ -12,7 +15,8 @@ type FlangeType11DimensionsProps = {
     color: string;
 };
 
-export default function FlangeType11Dimensions({ measures, pos, rails, faceProfile, cLowerLineY, color }: FlangeType11DimensionsProps) {
+export default function FlangeType11Dimensions({ measures, typeDefinition, halfSection, pos, rails, faceProfile, cLowerLineY, color }: FlangeType11DimensionsProps) {
+    const definition = typeDefinition;
     const {
         centerX,
         topY,
@@ -20,7 +24,6 @@ export default function FlangeType11Dimensions({ measures, pos, rails, faceProfi
         hubFaceRight,
         hubNeckRight,
         neckTopY,
-        neckWall,
     } = pos;
 
     const measureValue = (...keys: string[]): string | number => getMeasureValue(measures, ...keys);
@@ -28,8 +31,8 @@ export default function FlangeType11Dimensions({ measures, pos, rails, faceProfi
 
     const aLineY = rails.top.pipeBore!;
     const n1LineY = rails.top.neckOuter!;
-    const neckBoreRight = boreRight + neckWall;
-    const neckOuterRight = hubNeckRight - 1;
+    const neckBoreRight = halfSection.neckBoreWallX;
+    const neckOuterRight = halfSection.neckOuterX;
 
     const r1OriginX = neckOuterRight + 5;
     const r1TextX = r1OriginX + 10 * faceProfile.annotationScale;
@@ -44,7 +47,7 @@ export default function FlangeType11Dimensions({ measures, pos, rails, faceProfi
         <>
             {/* A (pipe bore) diameter */}
             <DiameterDimension
-                label={`⌀${measureValue("A", "1")}`}
+                label={`⌀${measureValue(...(definition?.neckPipeBoreKeys ?? ["A", "1"]))}`}
                 centerX={centerX}
                 targetX={neckBoreRight}
                 y={aLineY}
@@ -54,7 +57,7 @@ export default function FlangeType11Dimensions({ measures, pos, rails, faceProfi
 
             {/* S (neck wall) */}
             <NeckWallDimension
-                label={`${measureValueOrInstruction("S")}`}
+                label={`${measureValueOrInstruction(...(definition?.neckWallKeys ?? ["S"]))}`}
                 labelX={neckBoreRight - 30}
                 boreX={boreRight}
                 outerX={neckBoreRight}
@@ -68,7 +71,7 @@ export default function FlangeType11Dimensions({ measures, pos, rails, faceProfi
 
             {/* R1 (fillet) */}
             <RadiusLeaderDimension
-                label={measureValue("R1")}
+                label={measureValue(...(definition?.radiusKeys ?? ["R1"]))}
                 originX={r1OriginX}
                 originY={r1OriginY}
                 textX={(r1OriginX + r1TextX) / 2}
@@ -83,7 +86,7 @@ export default function FlangeType11Dimensions({ measures, pos, rails, faceProfi
 
             {/* H3 (neck step) */}
             <NeckStepDimension
-                label={measureValue("H3")}
+                label={measureValue(...(definition?.neckStepKeys ?? ["H3"]))}
                 x={h3LineX}
                 textX={h3TextX}
                 textY={neckTopY - 4}
@@ -98,7 +101,7 @@ export default function FlangeType11Dimensions({ measures, pos, rails, faceProfi
 
             {/* N1 (outer neck) diameter */}
             <DiameterDimension
-                label={`⌀${measureValue("N1")}`}
+                label={`⌀${measureValue(...(definition?.neckOuterKeys ?? ["N1"]))}`}
                 centerX={centerX}
                 targetX={neckOuterRight}
                 y={n1LineY}
@@ -108,7 +111,7 @@ export default function FlangeType11Dimensions({ measures, pos, rails, faceProfi
 
             {/* H2 (total height) */}
             <VerticalDimension
-                label={`${measureValue("H2")}`}
+                label={`${measureValue(...(definition?.neckTotalHeightKeys ?? ["H2"]))}`}
                 x={rails.right.totalHeight!}
                 textX={rails.right.totalHeightText!}
                 y1={neckTopY}

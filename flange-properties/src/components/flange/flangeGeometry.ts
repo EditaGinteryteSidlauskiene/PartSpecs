@@ -1,5 +1,5 @@
-import { getNumericMeasureValue, type FlangeMeasures } from "./flangeMeasures";
-import { isFlatFlangeType, isFlangeType01, isFlangeType05, isFlangeType11, normalizeFlangeType } from "./flangeTypes";
+import { getNumericMeasureValue, type FlangeMeasures } from "./flangeMeasures.ts";
+import { getFlangeTypeDefinition, normalizeFlangeType } from "./flangeTypes.ts";
 
 export type FlangePositions = {
     centerX: number;
@@ -56,28 +56,14 @@ type BodyDimensions = {
     boreDisplayRadius: number;
 };
 
-const getThicknessKeys = (flangeType?: string): string[] => {
-    if (isFlangeType11(flangeType)) {
-        return ["C2"];
-    }
-
-    if (isFlangeType01(flangeType)) {
-        return ["C1"];
-    }
-
-    if (isFlangeType05(flangeType)) {
-        return ["C4"];
-    }
-
-    return ["C1", "C2", "C3", "C4", "7", "8", "9", "10"];
-};
+const DEFAULT_THICKNESS_KEYS = ["C1", "C2", "C3", "C4", "7", "8", "9", "10"];
 
 const getGeometryMeasures = (measures: FlangeMeasures | undefined, flangeType?: string): GeometryMeasures => {
+    const definition = getFlangeTypeDefinition(flangeType);
     const D = getNumericMeasureValue(measures, "D", "0");
-    const thicknessKeys = getThicknessKeys(flangeType);
-    let C = getNumericMeasureValue(measures, ...thicknessKeys);
+    let C = getNumericMeasureValue(measures, ...(definition?.thicknessKeys ?? DEFAULT_THICKNESS_KEYS));
 
-    if (isFlatFlangeType(flangeType) && !C && D) {
+    if (definition?.isFlat && definition.useDefaultThickness && !C && D) {
         C = D * 0.04;
     }
 
@@ -88,21 +74,31 @@ const getGeometryMeasures = (measures: FlangeMeasures | undefined, flangeType?: 
         K: getNumericMeasureValue(measures, "K", "1"),
         L: getNumericMeasureValue(measures, "L", "2"),
         C,
-        H2: isFlangeType11(flangeType) ? getNumericMeasureValue(measures, "H2") : null,
-        S: isFlangeType11(flangeType) ? getNumericMeasureValue(measures, "S") : null,
+        H2: definition?.hasNeck ? getNumericMeasureValue(measures, ...(definition.neckTotalHeightKeys.length ? definition.neckTotalHeightKeys : ["H2"])) : null,
+        S: definition?.hasNeck ? getNumericMeasureValue(measures, ...(definition.neckWallKeys.length ? definition.neckWallKeys : ["S"])) : null,
     };
 };
 
 const computeBoreReference = ({ D, A, B1 }: GeometryMeasures, flangeType?: string): number | null => {
-    if (isFlangeType01(flangeType)) {
+    const definition = getFlangeTypeDefinition(flangeType);
+
+    if (!definition) {
+        return A;
+    }
+
+    if (!definition.hasBore) {
+        return null;
+    }
+
+    if (definition.boreDiameterKeys.includes("B1")) {
         return B1 ?? (D ? D * 0.8 : null);
     }
 
-    if (isFlangeType05(flangeType)) {
-        return D ? D * 0.8 : null;
+    if (definition.neckPipeBoreKeys.includes("A")) {
+        return A;
     }
 
-    return A;
+    return D ? D * definition.useDefaultBoreReference! : null;
 };
 
 const computeDisplayedRadialWidth = (D: number | null, boreRef: number | null): number => {
@@ -118,12 +114,13 @@ const computeScale = (
     boreRef: number | null,
     flangeType?: string
 ): number => {
+    const definition = getFlangeTypeDefinition(flangeType);
     const displayedRadialWidth = computeDisplayedRadialWidth(D, boreRef);
     let scale: number;
 
-    if (isFlatFlangeType(flangeType) && C) {
-        scale = 2.5;
-    } else if (isFlangeType11(flangeType) && H2) {
+    if (definition?.fixedScale && C) {
+        scale = definition.fixedScale;
+    } else if (definition?.heightScaleReference === "H2" && H2) {
         scale = 120 / H2;
     } else if (displayedRadialWidth > 0) {
         scale = SVG_TOTAL_WIDTH / displayedRadialWidth;
@@ -141,11 +138,16 @@ const computeBodyDimensions = (
     scale: number,
     flangeType?: string
 ): BodyDimensions => {
-    const boreDisplayRadius = isFlangeType01(flangeType) || isFlangeType11(flangeType) ? 50 : 0;
+    const definition = getFlangeTypeDefinition(flangeType);
+    const boreDisplayRadius = definition?.boreDisplayRadius ?? 0;
     const boltHoleRadius = L ? (L / 2) * scale * 0.5 : DEFAULT_BOLT_HOLE_RADIUS;
-    const thickness = isFlatFlangeType(flangeType) ? DEFAULT_THICKNESS : C ? C * scale : DEFAULT_THICKNESS;
+    const thickness = definition?.useDefaultThickness
+        ? definition.fixedThickness ?? DEFAULT_THICKNESS
+        : C
+        ? C * scale
+        : DEFAULT_THICKNESS;
 
-    if (isFlangeType05(flangeType)) {
+    if (definition?.type === "05") {
         return {
             halfD: DEFAULT_HALF_D,
             halfK: DEFAULT_HALF_K,
@@ -169,6 +171,7 @@ export function computeFlangePositions(
     flangeType?: string
 ): FlangePositions {
     const normalizedType = normalizeFlangeType(flangeType);
+    const definition = getFlangeTypeDefinition(normalizedType);
     const geometryMeasures = getGeometryMeasures(measures, normalizedType);
     const boreRef = computeBoreReference(geometryMeasures, normalizedType);
     const scale = computeScale(geometryMeasures, boreRef, normalizedType);
@@ -180,12 +183,12 @@ export function computeFlangePositions(
     );
 
     const centerX = CENTER_X;
-    const topY = isFlangeType01(normalizedType) ? TOP_Y + 350 : (isFlangeType05(normalizedType) ? TOP_Y + 300 : TOP_Y);
+    const topY = definition?.topOffset ? TOP_Y + definition.topOffset : TOP_Y;
     const bottomY = topY + thickness;
 
     const neckHeight = geometryMeasures.H2 && geometryMeasures.C
         ? (geometryMeasures.H2 - geometryMeasures.C) * scale
-        : (isFlatFlangeType(normalizedType) ? 0 : 29);
+        : (definition?.isFlat ? 0 : 29);
     const neckTopY = topY - neckHeight;
     const neckWall = geometryMeasures.S ? geometryMeasures.S * scale * 0.5 : 2;
 

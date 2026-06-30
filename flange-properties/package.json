@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "test": "node --import ./src/test/registerTsxLoader.mjs --experimental-strip-types --experimental-specifier-resolution=node --test \"src/**/*.test.ts\"",
     "lint": "eslint .",
     "preview": "vite preview"
   },

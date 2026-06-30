@@ -10,6 +10,10 @@ type FlangeFaceDimensionsProps = {
 };
 
 export default function FlangeFaceDimensions({ pos, rails, faceProfile, color }: FlangeFaceDimensionsProps) {
+    if (faceProfile.isNoFace) {
+        return null;
+    }
+
     const {
         centerX,
         bottomY,
